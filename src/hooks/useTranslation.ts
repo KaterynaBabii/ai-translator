@@ -6,7 +6,13 @@ interface UseTranslationReturn {
   isTranslating: boolean;
   error: string;
   setError: (error: string) => void;
-  handleTranslate: (inputText: string, sourceLanguage: string, targetLanguage: string) => Promise<void>;
+  handleTranslate: (
+    inputText: string, 
+    sourceLanguage: string, 
+    targetLanguage: string,
+    tone: string,
+    conversationContext?: string
+  ) => Promise<void>;
   setTranslatedText: (text: string) => void;
 }
 
@@ -18,7 +24,9 @@ export const useTranslation = (): UseTranslationReturn => {
   const handleTranslate = async (
     inputText: string,
     sourceLanguage: string,
-    targetLanguage: string
+    targetLanguage: string,
+    tone: string,
+    conversationContext?: string
   ): Promise<void> => {
     if (!inputText.trim()) {
       setError('Please enter text to translate');
@@ -29,7 +37,13 @@ export const useTranslation = (): UseTranslationReturn => {
     setError('');
 
     try {
-      const translation = await translateText(inputText, sourceLanguage, targetLanguage);
+      const translation = await translateText(
+        inputText, 
+        sourceLanguage, 
+        targetLanguage, 
+        tone,
+        conversationContext
+      );
       setTranslatedText(translation);
     } catch (err) {
       setError('Translation failed. Please try again.');
