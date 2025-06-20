@@ -1,12 +1,5 @@
 import { useState } from 'react';
-
-interface UseLanguageSwapReturn {
-  sourceLanguage: string;
-  targetLanguage: string;
-  setSourceLanguage: (language: string) => void;
-  setTargetLanguage: (language: string) => void;
-  swapLanguages: (inputText: string, translatedText: string, setInputText: (text: string) => void, setTranslatedText: (text: string) => void) => void;
-}
+import { UseLanguageSwapReturn } from '../types';
 
 export const useLanguageSwap = (): UseLanguageSwapReturn => {
   const [sourceLanguage, setSourceLanguage] = useState('en');
@@ -20,7 +13,6 @@ export const useLanguageSwap = (): UseLanguageSwapReturn => {
   ) => {
     setSourceLanguage(targetLanguage);
     setTargetLanguage(sourceLanguage);
-    // Also swap the text if there's translated text
     if (translatedText) {
       setInputText(translatedText);
       setTranslatedText('');

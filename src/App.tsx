@@ -5,7 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 function App() {
   return (
     <ErrorBoundary>
-      <div>
+      <div className="min-h-screen bg-gray-100">
         <Translator />
       </div>
     </ErrorBoundary>

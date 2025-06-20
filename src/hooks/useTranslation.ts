@@ -1,20 +1,7 @@
 import { useState } from 'react';
 import { translateText } from '../helpers';
-
-interface UseTranslationReturn {
-  translatedText: string;
-  isTranslating: boolean;
-  error: string;
-  setError: (error: string) => void;
-  handleTranslate: (
-    inputText: string, 
-    sourceLanguage: string, 
-    targetLanguage: string,
-    tone: string,
-    conversationContext?: string
-  ) => Promise<void>;
-  setTranslatedText: (text: string) => void;
-}
+import { UseTranslationReturn } from '../types';
+import { ERROR_MESSAGES } from '../constants';
 
 export const useTranslation = (): UseTranslationReturn => {
   const [translatedText, setTranslatedText] = useState('');
@@ -46,7 +33,7 @@ export const useTranslation = (): UseTranslationReturn => {
       );
       setTranslatedText(translation);
     } catch (err) {
-      setError('Translation failed. Please try again.');
+      setError(ERROR_MESSAGES.TRANSLATION_FAILED);
       console.error('Translation error:', err);
     } finally {
       setIsTranslating(false);

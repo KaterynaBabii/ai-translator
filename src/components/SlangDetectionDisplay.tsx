@@ -1,16 +1,5 @@
 import React from 'react';
-
-interface SlangDetectionResult {
-  hasSlang: boolean;
-  slangTerms: string[];
-  suggestions: string[];
-  context: string;
-}
-
-interface SlangDetectionDisplayProps {
-  detectionResult: SlangDetectionResult | null;
-  isAnalyzing: boolean;
-}
+import { SlangDetectionDisplayProps } from '../types';
 
 const SlangDetectionDisplay: React.FC<SlangDetectionDisplayProps> = ({
   detectionResult,
@@ -18,9 +7,9 @@ const SlangDetectionDisplay: React.FC<SlangDetectionDisplayProps> = ({
 }) => {
   if (isAnalyzing) {
     return (
-      <div className="slang-detection-analyzing">
-        <div className="analyzing-spinner"></div>
-        <span>Analyzing for slang and idioms...</span>
+      <div className="flex items-center gap-2 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-sm text-blue-700">Analyzing for slang and idioms...</span>
       </div>
     );
   }
@@ -30,18 +19,18 @@ const SlangDetectionDisplay: React.FC<SlangDetectionDisplayProps> = ({
   }
 
   return (
-    <div className="slang-detection-result">
-      <div className="slang-header">
-        <span className="slang-icon">💬</span>
-        <span className="slang-title">Slang & Idioms Detected</span>
+    <div className="mt-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">💬</span>
+        <span className="font-medium text-yellow-800">Slang & Idioms Detected</span>
       </div>
       
-      <div className="slang-content">
-        <div className="slang-terms">
-          <strong>Detected terms:</strong>
-          <div className="terms-list">
+      <div className="space-y-3">
+        <div>
+          <strong className="text-yellow-800">Detected terms:</strong>
+          <div className="flex flex-wrap gap-2 mt-1">
             {detectionResult.slangTerms.map((term, index) => (
-              <span key={index} className="slang-term">
+              <span key={index} className="px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-sm font-medium">
                 {term}
               </span>
             ))}
@@ -49,9 +38,9 @@ const SlangDetectionDisplay: React.FC<SlangDetectionDisplayProps> = ({
         </div>
         
         {detectionResult.suggestions.length > 0 && (
-          <div className="slang-suggestions">
-            <strong>Translation tips:</strong>
-            <ul className="suggestions-list">
+          <div>
+            <strong className="text-yellow-800">Translation tips:</strong>
+            <ul className="mt-1 ml-4 list-disc text-sm text-yellow-700">
               {detectionResult.suggestions.map((suggestion, index) => (
                 <li key={index}>{suggestion}</li>
               ))}
@@ -59,9 +48,9 @@ const SlangDetectionDisplay: React.FC<SlangDetectionDisplayProps> = ({
           </div>
         )}
         
-        <div className="slang-note">
-          <span className="note-icon">💡</span>
-          <span>These will be translated naturally, not literally</span>
+        <div className="flex items-center gap-2 pt-2 border-t border-yellow-200">
+          <span className="text-lg">💡</span>
+          <span className="text-sm text-yellow-700">These will be translated naturally, not literally</span>
         </div>
       </div>
     </div>

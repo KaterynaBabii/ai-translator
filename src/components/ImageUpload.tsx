@@ -1,13 +1,6 @@
 import React, { useRef, useState, useCallback } from 'react';
-import { ImageIcon, XIcon } from './icons';
-
-interface ImageUploadProps {
-  onImageSelect: (file: File) => void;
-  onClear: () => void;
-  selectedFile: File | null;
-  isProcessing: boolean;
-  error: string;
-}
+import { ImageIcon, XIcon } from 'lucide-react';
+import { ImageUploadProps } from '../types';
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
   onImageSelect,
@@ -65,7 +58,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   return (
-    <div className="image-upload-container">
+    <div className="relative">
       <input
         ref={fileInputRef}
         type="file"
@@ -76,50 +69,58 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       
       {!selectedFile ? (
         <div
-          className={`image-upload-area ${isDragOver ? 'drag-over' : ''}`}
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
+            isDragOver 
+              ? 'border-blue-500 bg-blue-50' 
+              : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+          }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={handleClick}
         >
-          <ImageIcon className="upload-icon" />
-          <div className="upload-text">
-            <p>Click to upload or drag and drop</p>
-            <p className="upload-hint">Supports JPG, PNG, GIF (max 10MB)</p>
+          <ImageIcon className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <div>
+            <p className="text-gray-700 font-medium">Click to upload or drag and drop</p>
+            <p className="text-sm text-gray-500 mt-1">Supports JPG, PNG, GIF (max 10MB)</p>
           </div>
         </div>
       ) : (
-        <div className="image-preview-container">
-          <div className="image-preview">
-            <img
-              src={URL.createObjectURL(selectedFile)}
-              alt="Preview"
-              className="preview-image"
-            />
-            <div className="image-info">
-              <p className="file-name">{selectedFile.name}</p>
-              <p className="file-size">{formatFileSize(selectedFile.size)}</p>
+        <div className="relative">
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="relative">
+              <img
+                src={URL.createObjectURL(selectedFile)}
+                alt="Preview"
+                className="w-full h-48 object-cover"
+              />
+              <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-50 text-white p-3">
+                <p className="font-medium truncate">{selectedFile.name}</p>
+                <p className="text-sm opacity-90">{formatFileSize(selectedFile.size)}</p>
+              </div>
+              <button
+                onClick={onClear}
+                className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Remove image"
+                disabled={isProcessing}
+              >
+                <XIcon className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              onClick={onClear}
-              className="clear-image-button"
-              title="Remove image"
-              disabled={isProcessing}
-            >
-              <XIcon />
-            </button>
           </div>
         </div>
       )}
       
       {error && (
-        <div className="image-error">{error}</div>
+        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+          {error}
+        </div>
       )}
       
       {isProcessing && (
-        <div className="processing-overlay">
-          <div className="processing-spinner"></div>
-          <p>Processing image...</p>
+        <div className="absolute inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center rounded-lg">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
+          <p className="text-gray-600">Processing image...</p>
         </div>
       )}
     </div>

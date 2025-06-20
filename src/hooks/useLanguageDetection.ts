@@ -1,12 +1,6 @@
 import { useState, useCallback } from 'react';
 import { detectLanguage } from '../helpers';
-
-interface UseLanguageDetectionReturn {
-  isDetecting: boolean;
-  detectedLanguage: string | null;
-  detectInputLanguage: (text: string) => Promise<string>;
-  resetDetection: () => void;
-}
+import { UseLanguageDetectionReturn } from '../types';
 
 export const useLanguageDetection = (): UseLanguageDetectionReturn => {
   const [isDetecting, setIsDetecting] = useState(false);
@@ -14,7 +8,7 @@ export const useLanguageDetection = (): UseLanguageDetectionReturn => {
 
   const detectInputLanguage = useCallback(async (text: string): Promise<string> => {
     if (!text.trim()) {
-      return 'en'; // Default to English for empty text
+      return 'en';
     }
 
     setIsDetecting(true);
