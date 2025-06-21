@@ -1,30 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { BookOpen, Loader, Download, Eye, EyeOff, Link, FileText } from 'lucide-react';
-import { Language, Tone } from '../types';
-
-interface VocabularyItem {
-  word: string;
-  translation: string;
-  explanation: string;
-  exampleSource: string;
-  exampleTarget: string;
-}
-
-interface ArticleLearningProps {
-  sourceLanguage: string;
-  targetLanguage: string;
-  selectedTone: string;
-  languages: Language[];
-  tones: Tone[];
-  onSaveToVocabulary: (entry: {
-    originalText: string;
-    translatedText: string;
-    sourceLanguage: string;
-    targetLanguage: string;
-    tone: string;
-    notes?: string;
-  }) => void;
-}
+import { Language, Tone, ArticleLearningProps, VocabularyItem } from '../types';
 
 export const ArticleLearning: React.FC<ArticleLearningProps> = ({
   sourceLanguage,
@@ -33,6 +9,7 @@ export const ArticleLearning: React.FC<ArticleLearningProps> = ({
   languages,
   tones,
   onSaveToVocabulary,
+  onAddToHistory,
 }) => {
   const [articleText, setArticleText] = useState('');
   const [articleUrl, setArticleUrl] = useState('');
@@ -86,13 +63,24 @@ export const ArticleLearning: React.FC<ArticleLearningProps> = ({
       );
 
       setVocabularyItems(items);
+      
+      items.forEach(item => {
+        onAddToHistory({
+          sourceLanguage,
+          targetLanguage,
+          originalText: item.word,
+          translatedText: item.translation,
+          tone: selectedTone,
+          context: `Article analysis - ${difficultyLevel} level`,
+        });
+      });
     } catch (err) {
       console.error('Article analysis failed:', err);
       setError('Failed to analyze article. Please try again.');
     } finally {
       setIsAnalyzing(false);
     }
-  }, [articleText, sourceLanguage, targetLanguage, difficultyLevel, selectedTone]);
+  }, [articleText, sourceLanguage, targetLanguage, difficultyLevel, selectedTone, onAddToHistory]);
 
   const handleSaveVocabularyItem = useCallback((item: VocabularyItem) => {
     onSaveToVocabulary({
@@ -166,7 +154,7 @@ export const ArticleLearning: React.FC<ArticleLearningProps> = ({
             <button
               className={`flex-1 py-3 px-4 bg-transparent border border-gray-300 rounded-lg text-sm cursor-pointer transition-all duration-200 ${
                 inputMethod === 'text' 
-                  ? 'bg-blue-600 border-blue-600 text-white' 
+                  ? 'bg-blue-600 border-blue-600 ' 
                   : 'text-gray-500 hover:bg-gray-50 hover:border-gray-400'
               }`}
               onClick={() => setInputMethod('text')}
@@ -177,7 +165,7 @@ export const ArticleLearning: React.FC<ArticleLearningProps> = ({
             <button
               className={`flex-1 py-3 px-4 bg-transparent border border-gray-300 rounded-lg text-sm cursor-pointer transition-all duration-200 ${
                 inputMethod === 'url' 
-                  ? 'bg-blue-600 border-blue-600 text-white' 
+                  ? 'bg-blue-600 border-blue-600 ' 
                   : 'text-gray-500 hover:bg-gray-50 hover:border-gray-400'
               }`}
               onClick={() => setInputMethod('url')}

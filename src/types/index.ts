@@ -87,7 +87,7 @@ export interface UseTranslationReturn {
     targetLanguage: string,
     tone: string,
     conversationContext?: string
-  ) => Promise<void>;
+  ) => Promise<string | null>;
   setTranslatedText: (text: string) => void;
 }
 
@@ -229,4 +229,14 @@ export interface VocabularyItem {
   explanation: string;
   exampleSource: string;
   exampleTarget: string;
+}
+
+export interface ArticleLearningProps {
+  sourceLanguage: string;
+  targetLanguage: string;
+  selectedTone: string;
+  languages: Language[];
+  tones: Tone[];
+  onSaveToVocabulary: (entry: VocabularySaveEntry) => void;
+  onAddToHistory: (entry: Omit<ConversationEntry, 'id' | 'timestamp'>) => void;
 } 

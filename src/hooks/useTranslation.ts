@@ -14,10 +14,10 @@ export const useTranslation = (): UseTranslationReturn => {
     targetLanguage: string,
     tone: string,
     conversationContext?: string
-  ): Promise<void> => {
+  ): Promise<string | null> => {
     if (!inputText.trim()) {
       setError('Please enter text to translate');
-      return;
+      return null;
     }
 
     setIsTranslating(true);
@@ -32,9 +32,11 @@ export const useTranslation = (): UseTranslationReturn => {
         conversationContext
       );
       setTranslatedText(translation);
+      return translation;
     } catch (err) {
       setError(ERROR_MESSAGES.TRANSLATION_FAILED);
       console.error('Translation error:', err);
+      return null;
     } finally {
       setIsTranslating(false);
     }

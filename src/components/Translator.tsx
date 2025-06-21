@@ -42,8 +42,6 @@ export const Translator: React.FC = () => {
     clearGeneratedExamples,
   } = useTranslatorState();
 
-  const lastAddedTranslationRef = useRef<string>('');
-
   const {
     sourceLanguage,
     targetLanguage,
@@ -138,7 +136,8 @@ export const Translator: React.FC = () => {
     setSelectedTone(entry.tone);
     setSourceLanguage(entry.sourceLanguage);
     setTargetLanguage(entry.targetLanguage);
-  }, [setInputText, setSelectedTone, setSourceLanguage, setTargetLanguage]);
+    setTranslatedText('');
+  }, [setInputText, setSelectedTone, setSourceLanguage, setTargetLanguage, setTranslatedText]);
 
   const handleRemoveFromHistory = useCallback((id: string) => {
     removeFromHistory(id);
@@ -240,28 +239,27 @@ export const Translator: React.FC = () => {
   }, [inputText, clearGeneratedExamples]);
 
   useEffect(() => {
-    lastAddedTranslationRef.current = '';
-  }, [inputText]);
-
-  useEffect(() => {
-    if (translatedText && translatedText.trim() && inputMode === 'text') {
-      const translationKey = `${inputText}-${sourceLanguage}-${targetLanguage}-${selectedTone}`;
-      
-      if (lastAddedTranslationRef.current !== translationKey) {
-        const similarTranslations = getSimilarTranslations(inputText, sourceLanguage, targetLanguage, selectedTone);
-        addToHistory({
-          sourceLanguage,
-          targetLanguage,
-          originalText: inputText,
-          translatedText,
-          tone: selectedTone,
-          context: similarTranslations.length > 0 ? 'Similar translation found' : undefined,
-        });
-        
-        lastAddedTranslationRef.current = translationKey;
-      }
+    if (inputText.trim() === '') {
+      setTranslatedText('');
     }
-  }, [translatedText, inputText, sourceLanguage, targetLanguage, selectedTone, addToHistory, getSimilarTranslations, inputMode]);
+  }, [inputText, setTranslatedText]);
+
+  const prevLanguagesRef = useRef({ source: sourceLanguage, target: targetLanguage });
+  useEffect(() => {
+    const prev = prevLanguagesRef.current;
+    if (prev.source !== sourceLanguage || prev.target !== targetLanguage) {
+      setTranslatedText('');
+      prevLanguagesRef.current = { source: sourceLanguage, target: targetLanguage };
+    }
+  }, [sourceLanguage, targetLanguage, setTranslatedText]);
+
+  const prevToneRef = useRef(selectedTone);
+  useEffect(() => {
+    if (prevToneRef.current !== selectedTone) {
+      setTranslatedText('');
+      prevToneRef.current = selectedTone;
+    }
+  }, [selectedTone, setTranslatedText]);
 
   const handleStartListening = useCallback(() => {
     startSpeechRecognition(setInputText);
@@ -324,8 +322,23 @@ export const Translator: React.FC = () => {
         enhancedContext = `${context}\n\n${slangDetectionResult.context}`;
       }
       
-      await handleTranslate(inputText, sourceLanguage, targetLanguage, selectedTone, enhancedContext);
-      
+      try {
+        const translation = await handleTranslate(inputText, sourceLanguage, targetLanguage, selectedTone, enhancedContext);
+        
+        if (translation) {
+          const similarTranslations = getSimilarTranslations(inputText, sourceLanguage, targetLanguage, selectedTone);
+          addToHistory({
+            sourceLanguage,
+            targetLanguage,
+            originalText: inputText,
+            translatedText: translation,
+            tone: selectedTone,
+            context: similarTranslations.length > 0 ? 'Similar translation found' : undefined,
+          });
+        }
+      } catch (err) {
+        console.error('Translation failed:', err);
+      }
     }
   }, [
     inputMode,
@@ -348,8 +361,9 @@ export const Translator: React.FC = () => {
     if (mode === 'text') {
       clearImage();
     }
+    setTranslatedText('');
     clearSlangAnalysis();
-  }, [setInputMode, clearImage, clearSlangAnalysis]);
+  }, [setInputMode, setTranslatedText, clearSlangAnalysis, clearImage]);
 
   const getLanguageName = useCallback((code: string) => {
     return LANGUAGES.find(lang => lang.code === code)?.name || code;
@@ -450,6 +464,7 @@ export const Translator: React.FC = () => {
                 languages={LANGUAGES}
                 tones={TONES}
                 onSaveToVocabulary={handleSaveToVocabulary}
+                onAddToHistory={addToHistory}
               />
             )}
 
