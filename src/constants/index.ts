@@ -60,7 +60,7 @@ export const ERROR_MESSAGES = {
 } as const;
 
 export const API_ENDPOINTS = {
-  GEMINI_MODEL: 'gemini-2.0-flash-exp',
+  GEMINI_MODEL: 'gemini-2.5-flash',
 } as const;
 
 export const SLANG_PATTERNS = {
