@@ -23,7 +23,7 @@ steps:
       - 'us-central1'
       - '--platform'
       - 'managed'
-      - '--allow-unauthenticated'\ 
+      - '--allow-unauthenticated'
       - '--set-env-vars'
       - 'REACT_APP_GEMINI_API_KEY=${_REACT_APP_GEMINI_API_KEY}'
       - '--port'
