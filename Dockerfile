@@ -1,35 +1,30 @@
-# Build stage
-FROM node:20-slim as builder
+FROM node:18-alpine as build
 
 WORKDIR /app
+
+ARG REACT_APP_GCP_PROJECT_ID
+ARG REACT_APP_API_URL
+ARG REACT_APP_ENVIRONMENT=production
+
+ENV REACT_APP_GCP_PROJECT_ID=$REACT_APP_GCP_PROJECT_ID
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ENV REACT_APP_ENVIRONMENT=$REACT_APP_ENVIRONMENT
+
 COPY package*.json ./
 RUN npm install
+
 COPY . .
-
-# Build with environment variables
-ARG VITE_FIREBASE_API_KEY
-ARG VITE_FIREBASE_AUTH_DOMAIN
-ARG VITE_FIREBASE_PROJECT_ID
-ARG VITE_API_URL
-
-ENV VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY
-ENV VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN
-ENV VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID
-ENV VITE_API_URL=$VITE_API_URL
-
 RUN npm run build
 
-# Production stage
 FROM nginx:alpine
 
-# Copy the built app
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port 8080 (Cloud Run requirement)
 EXPOSE 8080
 
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget -q --spider http://localhost:8080/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"] 
