@@ -3,26 +3,24 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/smart-translation'
+      - 'gcr.io/$PROJECT_ID/ai-translator'
       - '--build-arg'
-      - 'REACT_APP_GCP_PROJECT_ID=$PROJECT_ID'
-      - '--build-arg'
-      - 'REACT_APP_API_URL=${_API_URL}'
+      - 'REACT_APP_GEMINI_API_KEY=${_REACT_APP_GEMINI_API_KEY}'
       - '--build-arg'
       - 'REACT_APP_ENVIRONMENT=production'
       - '.'
 
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/smart-translation']
+    args: ['push', 'gcr.io/$PROJECT_ID/ai-translator']
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
-      - 'smart-translation'
+      - 'ai-translator'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/smart-translation'
+      - 'gcr.io/$PROJECT_ID/ai-translator'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -34,10 +32,10 @@ steps:
       - '300s'
 
 images:
-  - 'gcr.io/$PROJECT_ID/smart-translation'
+  - 'gcr.io/$PROJECT_ID/ai-translator'
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
 substitutions:
-  _API_URL: 'https://backend-url'
+  _REACT_APP_GEMINI_API_KEY: ''
