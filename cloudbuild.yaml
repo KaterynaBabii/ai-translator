@@ -6,8 +6,6 @@ steps:
       - 'gcr.io/$PROJECT_ID/ai-translator'
       - '--build-arg'
       - 'REACT_APP_GEMINI_API_KEY=${_REACT_APP_GEMINI_API_KEY}'
-      - '--build-arg'
-      - 'REACT_APP_ENVIRONMENT=production'
       - '.'
 
   - name: 'gcr.io/cloud-builders/docker'
@@ -25,17 +23,16 @@ steps:
       - 'us-central1'
       - '--platform'
       - 'managed'
-      - '--allow-unauthenticated'
+      - '--allow-unauthenticated'\ 
+      - '--set-env-vars'
+      - 'REACT_APP_GEMINI_API_KEY=${_REACT_APP_GEMINI_API_KEY}'
       - '--port'
       - '8080'
       - '--timeout'
       - '300s'
 
-images:
-  - 'gcr.io/$PROJECT_ID/ai-translator'
+substitutions:
+  _REACT_APP_GEMINI_API_KEY: '' 
 
 options:
   logging: CLOUD_LOGGING_ONLY
-
-substitutions:
-  _REACT_APP_GEMINI_API_KEY: ''
