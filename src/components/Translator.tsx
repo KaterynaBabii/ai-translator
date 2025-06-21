@@ -19,6 +19,7 @@ import { InputModeSelector } from './InputModeSelector';
 import { TextInputArea } from './TextInputArea';
 import { TranslationOutput } from './TranslationOutput';
 import { TranslationControls } from './TranslationControls';
+import { ArticleLearning } from './ArticleLearning';
 
 export const Translator: React.FC = () => {
   const {
@@ -41,7 +42,6 @@ export const Translator: React.FC = () => {
     clearGeneratedExamples,
   } = useTranslatorState();
 
-  // Ref to track the last added translation to prevent infinite loops
   const lastAddedTranslationRef = useRef<string>('');
 
   const {
@@ -239,18 +239,14 @@ export const Translator: React.FC = () => {
     clearGeneratedExamples();
   }, [inputText, clearGeneratedExamples]);
 
-  // Reset the last added translation ref when input text changes
   useEffect(() => {
     lastAddedTranslationRef.current = '';
   }, [inputText]);
 
-  // Add to history when translation is complete
   useEffect(() => {
     if (translatedText && translatedText.trim() && inputMode === 'text') {
-      // Create a unique key for this translation to prevent duplicates
       const translationKey = `${inputText}-${sourceLanguage}-${targetLanguage}-${selectedTone}`;
       
-      // Only add if we haven't already added this exact translation
       if (lastAddedTranslationRef.current !== translationKey) {
         const similarTranslations = getSimilarTranslations(inputText, sourceLanguage, targetLanguage, selectedTone);
         addToHistory({
@@ -262,7 +258,6 @@ export const Translator: React.FC = () => {
           context: similarTranslations.length > 0 ? 'Similar translation found' : undefined,
         });
         
-        // Update the ref to mark this translation as added
         lastAddedTranslationRef.current = translationKey;
       }
     }
@@ -323,8 +318,7 @@ export const Translator: React.FC = () => {
       }
     } else {
       const context = getContextForTranslation(sourceLanguage, targetLanguage, selectedTone, inputText);
-      const similarTranslations = getSimilarTranslations(inputText, sourceLanguage, targetLanguage, selectedTone);
-      
+
       let enhancedContext = context;
       if (slangDetectionResult?.hasSlang && slangDetectionResult.context) {
         enhancedContext = `${context}\n\n${slangDetectionResult.context}`;
@@ -332,8 +326,6 @@ export const Translator: React.FC = () => {
       
       await handleTranslate(inputText, sourceLanguage, targetLanguage, selectedTone, enhancedContext);
       
-      // Add to history after translation is complete
-      // We'll use a useEffect to watch for translatedText changes
     }
   }, [
     inputMode,
@@ -351,7 +343,7 @@ export const Translator: React.FC = () => {
     slangDetectionResult
   ]);
 
-  const handleInputModeChange = useCallback((mode: 'text' | 'image') => {
+  const handleInputModeChange = useCallback((mode: 'text' | 'image' | 'article') => {
     setInputMode(mode);
     if (mode === 'text') {
       clearImage();
@@ -426,7 +418,7 @@ export const Translator: React.FC = () => {
                 slangDetectionResult={slangDetectionResult}
                 isSlangAnalyzing={isSlangAnalyzing}
               />
-            ) : (
+            ) : inputMode === 'image' ? (
               <div className="mb-6">
                 <ImageUpload
                   onImageSelect={handleImageSelect}
@@ -450,18 +442,29 @@ export const Translator: React.FC = () => {
                   </div>
                 )}
               </div>
+            ) : (
+              <ArticleLearning
+                sourceLanguage={sourceLanguage}
+                targetLanguage={targetLanguage}
+                selectedTone={selectedTone}
+                languages={LANGUAGES}
+                tones={TONES}
+                onSaveToVocabulary={handleSaveToVocabulary}
+              />
             )}
 
-            <TranslationControls
-              handleTranslateWithContext={handleTranslateWithContext}
-              isTranslating={isTranslating}
-              isImageProcessing={isImageProcessing}
-              inputText={inputText}
-              imageFile={imageFile}
-              error={error}
-            />
+            {inputMode !== 'article' && (
+              <TranslationControls
+                handleTranslateWithContext={handleTranslateWithContext}
+                isTranslating={isTranslating}
+                isImageProcessing={isImageProcessing}
+                inputText={inputText}
+                imageFile={imageFile}
+                error={error}
+              />
+            )}
 
-            {translatedText && (
+            {translatedText && inputMode !== 'article' && (
               <TranslationOutput
                 translatedText={translatedText}
                 inputText={inputText}

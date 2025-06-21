@@ -13,4 +13,5 @@ export { InputModeSelector } from './InputModeSelector';
 export { TextInputArea } from './TextInputArea';
 export { TranslationOutput } from './TranslationOutput';
 export { TranslationControls } from './TranslationControls';
-export { ErrorPreview } from './ErrorPreview'; 
+export { ErrorPreview } from './ErrorPreview';
+export { ArticleLearning } from './ArticleLearning'; 

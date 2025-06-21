@@ -211,4 +211,231 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-export { LANGUAGES, TONES }; 
+export { LANGUAGES, TONES };
+
+export const analyzeArticleForVocabulary = async (
+  articleText: string,
+  sourceLanguage: string,
+  targetLanguage: string,
+  difficultyLevel: 'beginner' | 'intermediate' | 'advanced',
+  tone: string = 'neutral'
+): Promise<Array<{
+  word: string;
+  translation: string;
+  explanation: string;
+  exampleSource: string;
+  exampleTarget: string;
+}>> => {
+  try {
+    const sourceLanguageName = LANGUAGES.find(lang => lang.code === sourceLanguage)?.name || sourceLanguage;
+    const targetLanguageName = LANGUAGES.find(lang => lang.code === targetLanguage)?.name || targetLanguage;
+    const toneDescription = TONES.find(t => t.code === tone)?.description || 'Standard';
+    
+    const prompt = `Analyze the following article text written in ${sourceLanguageName} and help a ${difficultyLevel} learner study ${targetLanguageName} using real content.
+                
+                Here's what to do:
+                
+                1. Analyze the following article text written in ${sourceLanguageName}.
+                2. Identify 10 useful vocabulary words or phrases that are:
+                   - Common or essential for understanding the article
+                   - Appropriate for ${difficultyLevel.toUpperCase()} learners
+                   - Useful for everyday communication
+                3. For each word or phrase, provide:
+                   - The word/phrase in ${sourceLanguageName}
+                   - Its translation in ${targetLanguageName} (using ${tone} tone: ${toneDescription})
+                   - A simple explanation or definition in ${targetLanguageName}
+                   - One example sentence in the source language (${sourceLanguageName})
+                   - Its translated version in the target language (${targetLanguageName})
+                
+                IMPORTANT REQUIREMENTS:
+                - Focus on practical, commonly used vocabulary
+                - Ensure translations are natural and contextually appropriate
+                - Provide clear, simple explanations suitable for ${difficultyLevel} learners
+                - Include diverse types of vocabulary (nouns, verbs, adjectives, phrases)
+                - Make sure examples are relevant to the article context
+                - Use ${tone} tone consistently in translations
+                
+                The article text is:
+                """
+                ${articleText}
+                """
+                
+                Please provide the result in this exact JSON format:
+                [
+                  {
+                    "word": "original word/phrase",
+                    "translation": "translated word/phrase",
+                    "explanation": "simple explanation",
+                    "exampleSource": "example sentence in source language",
+                    "exampleTarget": "example sentence in target language"
+                  }
+                ]
+                
+                Return only the JSON array, no additional text, markdown formatting, or explanations.`;
+
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    let resultText = response.text();
+    
+    resultText = resultText.trim();
+    
+    if (resultText.startsWith('```json')) {
+      resultText = resultText.replace(/^```json\s*/, '');
+    }
+    if (resultText.startsWith('```')) {
+      resultText = resultText.replace(/^```\s*/, '');
+    }
+    if (resultText.endsWith('```')) {
+      resultText = resultText.replace(/\s*```$/, '');
+    }
+    
+    try {
+      const vocabularyItems = JSON.parse(resultText);
+      if (Array.isArray(vocabularyItems) && vocabularyItems.length > 0) {
+        return vocabularyItems.slice(0, 10);
+      }
+    } catch (parseError) {
+      console.error('Failed to parse vocabulary JSON:', parseError);
+      console.log('Raw response text:', resultText);
+    }
+    
+    const lines = resultText.split('\n').filter(line => line.trim());
+    const items: Array<{
+      word: string;
+      translation: string;
+      explanation: string;
+      exampleSource: string;
+      exampleTarget: string;
+    }> = [];
+    
+    for (let i = 0; i < Math.min(lines.length, 10); i++) {
+      const line = lines[i];
+      if (line.includes('→') || line.includes('-')) {
+        const parts = line.split(/[→-]/).map(part => part.trim());
+        if (parts.length >= 2) {
+          items.push({
+            word: parts[0] || `Vocabulary ${i + 1}`,
+            translation: parts[1] || '',
+            explanation: parts[2] || 'Useful vocabulary from the article',
+            exampleSource: parts[3] || 'Example sentence',
+            exampleTarget: parts[4] || 'Translated example',
+          });
+        }
+      }
+    }
+    
+    return items.length > 0 ? items : [
+      {
+        word: 'Sample vocabulary',
+        translation: 'Sample translation',
+        explanation: 'This is a sample vocabulary item from the article analysis.',
+        exampleSource: 'This is an example sentence.',
+        exampleTarget: 'This is the translated example sentence.',
+      }
+    ];
+  } catch (error) {
+    console.error('Article analysis error:', error);
+    throw new Error('Failed to analyze article for vocabulary');
+  }
+};
+
+export const fetchArticleContent = async (url: string): Promise<string> => {
+  try {
+    const proxyUrl = 'https://api.allorigins.win/get?url=';
+    const response = await fetch(proxyUrl + encodeURIComponent(url));
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.contents) {
+      throw new Error('No content found in the response');
+    }
+    
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data.contents, 'text/html');
+    
+    const scripts = doc.querySelectorAll('script, style, nav, header, footer, aside');
+    scripts.forEach(el => el.remove());
+    
+    let content = '';
+    
+    const selectors = [
+      'article',
+      '[role="main"]',
+      '.article-content',
+      '.post-content',
+      '.entry-content',
+      '.content',
+      '.main-content',
+      '#content',
+      '#main',
+      '.article',
+      '.post',
+      '.entry'
+    ];
+    
+    for (const selector of selectors) {
+      const element = doc.querySelector(selector);
+      if (element && element.textContent && element.textContent.trim().length > 200) {
+        content = element.textContent;
+        break;
+      }
+    }
+    
+    if (!content) {
+      const body = doc.querySelector('body');
+      if (body) {
+        const nonContentSelectors = [
+          'nav', 'header', 'footer', 'aside', '.sidebar', '.navigation',
+          '.menu', '.breadcrumb', '.pagination', '.comments', '.advertisement',
+          '.ads', '.social-share', '.related-posts'
+        ];
+        
+        nonContentSelectors.forEach(selector => {
+          const elements = body.querySelectorAll(selector);
+          elements.forEach(el => el.remove());
+        });
+        
+        content = body.textContent || '';
+      }
+    }
+    
+    if (content) {
+      content = content
+        .replace(/\s+/g, ' ')
+        .replace(/\n\s*\n/g, '\n')
+        .trim();
+      
+      if (content.length > 8000) {
+        content = content.substring(0, 8000) + '...';
+      }
+      
+      return content;
+    }
+    
+    throw new Error('Could not extract article content from the URL');
+  } catch (error) {
+    console.error('Article fetching error:', error);
+    
+    try {
+      const prompt = `Extract the main article content from this URL: ${url}
+            Please fetch the webpage and return only the main article text content, removing navigation, ads, and other non-content elements.
+            Return only the clean article text, no HTML tags or additional formatting.`;
+      
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const extractedContent = response.text().trim();
+      
+      if (extractedContent && extractedContent.length > 100) {
+        return extractedContent;
+      }
+    } catch (geminiError) {
+      console.error('Gemini fallback failed:', geminiError);
+    }
+    
+    throw new Error('Failed to fetch article content. Please check the URL and try again.');
+  }
+}; 

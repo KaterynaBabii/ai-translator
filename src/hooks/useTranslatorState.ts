@@ -5,7 +5,7 @@ export interface TranslatorState {
   selectedTone: string;
   autoDetectEnabled: boolean;
   autoUpdateVoiceLanguage: boolean;
-  inputMode: 'text' | 'image';
+  inputMode: 'text' | 'image' | 'article';
   isGeneratingExamples: boolean;
   generatedExamples: string[];
 }
@@ -37,7 +37,7 @@ export const useTranslatorState = () => {
     setState(prev => ({ ...prev, autoUpdateVoiceLanguage: enabled }));
   }, []);
 
-  const setInputMode = useCallback((mode: 'text' | 'image') => {
+  const setInputMode = useCallback((mode: 'text' | 'image' | 'article') => {
     setState(prev => ({ ...prev, inputMode: mode }));
   }, []);
 

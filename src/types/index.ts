@@ -220,5 +220,13 @@ export interface ImageUploadProps {
   error: string;
 }
 
-export type InputMode = 'text' | 'image';
-export type DifficultyLevel = 'easy' | 'medium' | 'hard'; 
+export type InputMode = 'text' | 'image' | 'article';
+export type DifficultyLevel = 'easy' | 'medium' | 'hard';
+
+export interface VocabularyItem {
+  word: string;
+  translation: string;
+  explanation: string;
+  exampleSource: string;
+  exampleTarget: string;
+} 
