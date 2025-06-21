@@ -4,7 +4,7 @@ import { speakText } from '../utils/speechSynthesis';
 import { VocabularyEntry, VocabularySidebarProps } from '../types';
 import { LANGUAGES, UI_CONSTANTS } from '../constants';
 
-const VocabularySidebar: React.FC<VocabularySidebarProps> = ({
+export const VocabularySidebar: React.FC<VocabularySidebarProps> = ({
   vocabulary,
   onUpdateEntry,
   onRemoveEntry,
@@ -269,5 +269,3 @@ const VocabularySidebar: React.FC<VocabularySidebarProps> = ({
     </div>
   );
 };
-
-export default VocabularySidebar; 

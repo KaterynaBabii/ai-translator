@@ -1,6 +1,5 @@
 import React from 'react';
-import Translator from './components/Translator';
-import ErrorBoundary from './components/ErrorBoundary';
+import { Translator, ErrorBoundary } from './components';
 
 function App() {
   return (

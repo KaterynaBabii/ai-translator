@@ -1,7 +1,7 @@
 import React from 'react';
 import { SlangDetectionDisplayProps } from '../types';
 
-const SlangDetectionDisplay: React.FC<SlangDetectionDisplayProps> = ({
+export const SlangDetectionDisplay: React.FC<SlangDetectionDisplayProps> = ({
   detectionResult,
   isAnalyzing,
 }) => {
@@ -56,5 +56,3 @@ const SlangDetectionDisplay: React.FC<SlangDetectionDisplayProps> = ({
     </div>
   );
 };
-
-export default SlangDetectionDisplay; 

@@ -2,7 +2,7 @@ import React, { useRef, useState, useCallback } from 'react';
 import { ImageIcon, XIcon } from 'lucide-react';
 import { ImageUploadProps } from '../types';
 
-const ImageUpload: React.FC<ImageUploadProps> = ({
+export const ImageUpload: React.FC<ImageUploadProps> = ({
   onImageSelect,
   onClear,
   selectedFile,
@@ -126,5 +126,3 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     </div>
   );
 };
-
-export default ImageUpload; 

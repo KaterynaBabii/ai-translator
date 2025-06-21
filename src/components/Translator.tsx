@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
 import { LANGUAGES, TONES } from '../helpers';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useTranslation } from '../hooks/useTranslation';
@@ -8,23 +8,41 @@ import { useLanguageDetection } from '../hooks/useLanguageDetection';
 import { useImageProcessing } from '../hooks/useImageProcessing';
 import { useSlangDetection } from '../hooks/useSlangDetection';
 import { useVocabulary } from '../hooks/useVocabulary';
+import { useTranslatorState } from '../hooks/useTranslatorState';
 import { speakText } from '../utils/speechSynthesis';
-import ConversationHistory from './ConversationHistory';
-import ImageUpload from './ImageUpload';
-import SlangDetectionDisplay from './SlangDetectionDisplay';
-import SaveToVocabularyButton from './SaveToVocabularyButton';
-import VocabularySidebar from './VocabularySidebar';
-import { Mic, MicOff, ArrowRightLeft, Loader, PlayIcon, RotateCcw } from 'lucide-react';
-import { DetectIcon } from "./icons/DetectIcon";
+import { ConversationHistory } from './ConversationHistory';
+import {ImageUpload} from './ImageUpload';
+import { VocabularySidebar } from './VocabularySidebar';
+import { LanguageSelector } from './LanguageSelector';
+import { ToneSelector } from './ToneSelector';
+import { InputModeSelector } from './InputModeSelector';
+import { TextInputArea } from './TextInputArea';
+import { TranslationOutput } from './TranslationOutput';
+import { TranslationControls } from './TranslationControls';
 
-const Translator: React.FC = () => {
-  const [inputText, setInputText] = useState('');
-  const [selectedTone, setSelectedTone] = useState('neutral');
-  const [autoDetectEnabled, setAutoDetectEnabled] = useState(true);
-  const [autoUpdateVoiceLanguage, setAutoUpdateVoiceLanguage] = useState(true);
-  const [inputMode, setInputMode] = useState<'text' | 'image'>('text');
-  const [isGeneratingExamples, setIsGeneratingExamples] = useState(false);
-  const [generatedExamples, setGeneratedExamples] = useState<string[]>([]);
+export const Translator: React.FC = () => {
+  const {
+    state: {
+      inputText,
+      selectedTone,
+      autoDetectEnabled,
+      autoUpdateVoiceLanguage,
+      inputMode,
+      isGeneratingExamples,
+      generatedExamples,
+    },
+    setInputText,
+    setSelectedTone,
+    setAutoDetectEnabled,
+    setAutoUpdateVoiceLanguage,
+    setInputMode,
+    setIsGeneratingExamples,
+    setGeneratedExamples,
+    clearGeneratedExamples,
+  } = useTranslatorState();
+
+  // Ref to track the last added translation to prevent infinite loops
+  const lastAddedTranslationRef = useRef<string>('');
 
   const {
     sourceLanguage,
@@ -118,7 +136,9 @@ const Translator: React.FC = () => {
   const handleUseTranslation = useCallback((entry: any) => {
     setInputText(entry.originalText);
     setSelectedTone(entry.tone);
-  }, []);
+    setSourceLanguage(entry.sourceLanguage);
+    setTargetLanguage(entry.targetLanguage);
+  }, [setInputText, setSelectedTone, setSourceLanguage, setTargetLanguage]);
 
   const handleRemoveFromHistory = useCallback((id: string) => {
     removeFromHistory(id);
@@ -151,7 +171,9 @@ const Translator: React.FC = () => {
       const { generateExampleSentences } = await import('../helpers');
       const examples = await generateExampleSentences(
         inputText,
-          targetLanguage
+        targetLanguage,
+        [],
+        selectedTone
       );
 
       if (examples && examples.length > 0) {
@@ -167,7 +189,7 @@ const Translator: React.FC = () => {
     } finally {
       setIsGeneratingExamples(false);
     }
-  }, [inputText, translatedText, targetLanguage]);
+  }, [inputText, translatedText, targetLanguage, selectedTone, setIsGeneratingExamples, setGeneratedExamples]);
 
   useEffect(() => {
     if (!autoDetectEnabled || !inputText.trim()) {
@@ -197,7 +219,7 @@ const Translator: React.FC = () => {
     if (extractedText && inputMode === 'image') {
       setInputText(extractedText);
     }
-  }, [extractedText, inputMode]);
+  }, [extractedText, inputMode, setInputText]);
 
   useEffect(() => {
     if (inputText.trim() && inputMode === 'text') {
@@ -214,12 +236,41 @@ const Translator: React.FC = () => {
   }, [inputText, sourceLanguage, inputMode, analyzeSlang, clearSlangAnalysis]);
 
   useEffect(() => {
-    setGeneratedExamples([]);
+    clearGeneratedExamples();
+  }, [inputText, clearGeneratedExamples]);
+
+  // Reset the last added translation ref when input text changes
+  useEffect(() => {
+    lastAddedTranslationRef.current = '';
   }, [inputText]);
+
+  // Add to history when translation is complete
+  useEffect(() => {
+    if (translatedText && translatedText.trim() && inputMode === 'text') {
+      // Create a unique key for this translation to prevent duplicates
+      const translationKey = `${inputText}-${sourceLanguage}-${targetLanguage}-${selectedTone}`;
+      
+      // Only add if we haven't already added this exact translation
+      if (lastAddedTranslationRef.current !== translationKey) {
+        const similarTranslations = getSimilarTranslations(inputText, sourceLanguage, targetLanguage, selectedTone);
+        addToHistory({
+          sourceLanguage,
+          targetLanguage,
+          originalText: inputText,
+          translatedText,
+          tone: selectedTone,
+          context: similarTranslations.length > 0 ? 'Similar translation found' : undefined,
+        });
+        
+        // Update the ref to mark this translation as added
+        lastAddedTranslationRef.current = translationKey;
+      }
+    }
+  }, [translatedText, inputText, sourceLanguage, targetLanguage, selectedTone, addToHistory, getSimilarTranslations, inputMode]);
 
   const handleStartListening = useCallback(() => {
     startSpeechRecognition(setInputText);
-  }, [startSpeechRecognition]);
+  }, [startSpeechRecognition, setInputText]);
 
   const handleSpeakText = useCallback((text: string) => {
     speakText(text, targetLanguage);
@@ -281,16 +332,8 @@ const Translator: React.FC = () => {
       
       await handleTranslate(inputText, sourceLanguage, targetLanguage, selectedTone, enhancedContext);
       
-      if (translatedText) {
-        addToHistory({
-          sourceLanguage,
-          targetLanguage,
-          originalText: inputText,
-          translatedText,
-          tone: selectedTone,
-          context: similarTranslations.length > 0 ? 'Similar translation found' : undefined,
-        });
-      }
+      // Add to history after translation is complete
+      // We'll use a useEffect to watch for translatedText changes
     }
   }, [
     inputMode,
@@ -305,7 +348,6 @@ const Translator: React.FC = () => {
     addToHistory,
     getSimilarTranslations,
     handleTranslate,
-    translatedText,
     slangDetectionResult
   ]);
 
@@ -315,7 +357,7 @@ const Translator: React.FC = () => {
       clearImage();
     }
     clearSlangAnalysis();
-  }, [clearImage, clearSlangAnalysis]);
+  }, [setInputMode, clearImage, clearSlangAnalysis]);
 
   const getLanguageName = useCallback((code: string) => {
     return LANGUAGES.find(lang => lang.code === code)?.name || code;
@@ -341,287 +383,103 @@ const Translator: React.FC = () => {
           />
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <div className="flex items-center gap-4 mb-6 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <select
-                value={sourceLanguage}
-                onChange={(e) => setSourceLanguage(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white min-w-[150px]"
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </option>
-                ))}
-              </select>
-              
-              <div className="flex items-center gap-4 mt-3 flex-wrap">
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoDetectEnabled}
-                    onChange={(e) => setAutoDetectEnabled(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <span>Auto-detect text</span>
-                </label>
-                
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoUpdateVoiceLanguage}
-                    onChange={(e) => setAutoUpdateVoiceLanguage(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <span>Auto-update voice</span>
-                </label>
-                
-                <button
-                  onClick={handleManualDetect}
-                  disabled={isDetecting || !inputText.trim()}
-                  className="p-2 bg-transparent border border-gray-300 rounded-md cursor-pointer text-gray-500 hover:bg-gray-50 hover:border-gray-400 hover:text-gray-700 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Manually detect language"
-                >
-                  {isDetecting ? <Loader className="animate-spin w-4 h-4" /> : <DetectIcon className="w-4 h-4" />}
-                </button>
-              </div>
-              
-              {detectedLanguage && autoDetectEnabled && (
-                <div className="text-xs text-green-600 mt-1 font-medium">
-                  Detected: {getLanguageName(detectedLanguage)}
-                </div>
-              )}
-              
-              {detectedVoiceLanguage && autoUpdateVoiceLanguage && (
-                <div className="text-xs text-green-600 mt-1 font-medium">
-                  Voice: {getLanguageName(detectedVoiceLanguage)}
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={handleSwapLanguages}
-              className="p-3 bg-transparent border border-gray-300 rounded-lg cursor-pointer text-gray-500 hover:bg-gray-50 hover:border-gray-400 hover:text-gray-700 transition-all duration-200 flex items-center justify-center"
-              title="Swap languages"
-            >
-              <ArrowRightLeft className="w-5 h-5" />
-            </button>
-
-            <select
-              value={targetLanguage}
-              onChange={(e) => setTargetLanguage(e.target.value)}
-              className="p-3 border border-gray-300 rounded-lg text-sm bg-white min-w-[150px]"
-            >
-              {LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.name}
-                </option>
-              ))}
-            </select>
+        <div className="bg-white rounded-xl shadow-sm">
+          <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 rounded-xl ">
+            <h3 className="text-lg font-semibold text-gray-800 m-0">Translation</h3>
           </div>
+          <div className="p-6">
+            <LanguageSelector
+              sourceLanguage={sourceLanguage}
+              targetLanguage={targetLanguage}
+              setSourceLanguage={setSourceLanguage}
+              setTargetLanguage={setTargetLanguage}
+              swapLanguages={handleSwapLanguages}
+              autoDetectEnabled={autoDetectEnabled}
+              setAutoDetectEnabled={setAutoDetectEnabled}
+              autoUpdateVoiceLanguage={autoUpdateVoiceLanguage}
+              setAutoUpdateVoiceLanguage={setAutoUpdateVoiceLanguage}
+              isDetecting={isDetecting}
+              handleManualDetect={handleManualDetect}
+              detectedLanguage={detectedLanguage}
+              detectedVoiceLanguage={detectedVoiceLanguage}
+              getLanguageName={getLanguageName}
+              languages={LANGUAGES}
+            />
 
-          <div className="mb-6">
-            <label htmlFor="tone-select" className="block text-sm font-medium text-gray-700 mb-2">
-              Translation Tone:
-            </label>
-            <select
-              id="tone-select"
-              value={selectedTone}
-              onChange={(e) => setSelectedTone(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white"
-            >
-              {TONES.map((tone) => (
-                <option key={tone.code} value={tone.code}>
-                  {tone.name} - {tone.description}
-                </option>
-              ))}
-            </select>
-          </div>
+            <ToneSelector
+              selectedTone={selectedTone}
+              setSelectedTone={setSelectedTone}
+              tones={TONES}
+            />
 
-          <div className="flex gap-2 mb-6">
-            <button
-              className={`flex-1 py-3 px-4 bg-transparent border border-gray-300 rounded-lg text-sm cursor-pointer transition-all duration-200 ${
-                inputMode === 'text' 
-                  ? 'bg-blue-600 border-blue-600' 
-                  : 'text-gray-500 hover:bg-gray-50 hover:border-gray-400'
-              }`}
-              onClick={() => handleInputModeChange('text')}
-            >
-              Text Input
-            </button>
-            <button
-              className={`flex-1 py-3 px-4 bg-transparent border border-gray-300 rounded-lg text-sm cursor-pointer transition-all duration-200 ${
-                inputMode === 'image' 
-                  ? 'bg-blue-600 border-blue-600 ' 
-                  : 'text-gray-500 hover:bg-gray-50 hover:border-gray-400'
-              }`}
-              onClick={() => handleInputModeChange('image')}
-            >
-              Image Upload
-            </button>
-          </div>
+            <InputModeSelector
+              inputMode={inputMode}
+              handleInputModeChange={handleInputModeChange}
+            />
 
-          {inputMode === 'text' ? (
-            <div className="relative mb-6">
-              <textarea
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Enter text to translate or click the microphone to speak..."
-                className="w-full min-h-[120px] p-4 border border-gray-300 rounded-lg text-base resize-y font-inherit focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            {inputMode === 'text' ? (
+              <TextInputArea
+                inputText={inputText}
+                setInputText={setInputText}
+                isListening={isListening}
+                handleStartListening={handleStartListening}
+                slangDetectionResult={slangDetectionResult}
+                isSlangAnalyzing={isSlangAnalyzing}
               />
-              <button
-                onClick={handleStartListening}
-                disabled={isListening}
-                className={`absolute bottom-4 right-4 p-3 bg-transparent border-none cursor-pointer rounded-lg transition-all duration-200 flex items-center justify-center ${
-                  isListening 
-                    ? 'text-red-500 bg-red-50' 
-                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                title={isListening ? 'Listening... Click to stop' : 'Click to speak'}
-              >
-                {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              </button>
-              
-              <SlangDetectionDisplay
-                detectionResult={slangDetectionResult}
-                isAnalyzing={isSlangAnalyzing}
-              />
-            </div>
-          ) : (
-            <div className="mb-6">
-              <ImageUpload
-                onImageSelect={handleImageSelect}
-                onClear={clearImage}
-                selectedFile={imageFile}
-                isProcessing={isImageProcessing}
-                error={imageError}
-              />
-              {extractedText && (
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Extracted Text:
-                  </label>
-                  <textarea
-                    value={extractedText}
-                    onChange={(e) => setExtractedText(e.target.value)}
-                    placeholder="Text extracted from image..."
-                    readOnly={isImageProcessing}
-                    className="w-full min-h-[80px] p-3 border border-gray-300 rounded-lg text-sm resize-y font-inherit"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <button
-            onClick={handleTranslateWithContext}
-            disabled={isTranslating || isImageProcessing || (!inputText.trim() && !imageFile)}
-            className="w-full p-4 bg-blue-600 text-white border-none rounded-lg text-base font-medium cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isTranslating || isImageProcessing ? (
-              <>
-                <Loader className="animate-spin w-5 h-5" />
-                {isImageProcessing ? 'Processing...' : 'Translating...'}
-              </>
             ) : (
-              'Translate'
-            )}
-          </button>
-
-          {translatedText && (
-            <div className="relative bg-gray-50 p-4 rounded-lg min-h-[150px] mt-6">
-              <p className="whitespace-pre-wrap m-0 flex-1 text-base leading-relaxed min-h-[100px]">
-                {translatedText}
-              </p>
-              <div className="flex items-end gap-4 justify-end">
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => handleSpeakText(translatedText)}
-                    className="p-2 bg-transparent border-none cursor-pointer text-gray-500 rounded-md transition-all duration-200 flex items-center gap-1 text-sm hover:text-gray-700 hover:bg-gray-100"
-                    title="Play pronunciation"
-                  >
-                    <PlayIcon className="w-5 h-5" />
-                  </button>
-                  
-                  <button
-                    onClick={handleGenerateExamples}
-                    disabled={isGeneratingExamples}
-                    className="p-2 bg-transparent border-none cursor-pointer text-gray-500 rounded-md transition-all duration-200 flex items-center gap-1 text-sm hover:text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Generate example sentences"
-                  >
-                    {isGeneratingExamples ? (
-                      <>
-                        <Loader className="animate-spin w-5 h-5" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <RotateCcw className="w-5 h-5" />
-                        Examples
-                      </>
-                    )}
-                  </button>
-                  
-                  <SaveToVocabularyButton
-                    originalText={inputText}
-                    translatedText={translatedText}
-                    sourceLanguage={sourceLanguage}
-                    targetLanguage={targetLanguage}
-                    tone={selectedTone}
-                    onSave={handleSaveToVocabulary}
-                    isSaved={isCurrentTranslationSaved}
-                    onRemove={handleRemoveFromVocabulary}
-                    entryId={savedEntryId || undefined}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {generatedExamples.length > 0 && (
-            <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-lg font-semibold text-blue-800 m-0">
-                  Example Sentences for "{inputText}"
-                </h4>
-                <button
-                  onClick={() => setGeneratedExamples([])}
-                  className="p-1 bg-transparent border-none cursor-pointer text-blue-600 rounded transition-all duration-200 hover:text-blue-800 hover:bg-blue-100"
-                  title="Clear examples"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="space-y-3">
-                {generatedExamples.map((example, index) => (
-                  <div key={index} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-blue-100">
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-800 leading-relaxed m-0">
-                        {example}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleSpeakText(example)}
-                      className="p-2 bg-transparent border-none cursor-pointer text-blue-600 rounded transition-all duration-200 hover:text-blue-800 hover:bg-blue-100 flex-shrink-0"
-                      title="Play pronunciation"
-                    >
-                      <PlayIcon className="w-4 h-4" />
-                    </button>
+              <div className="mb-6">
+                <ImageUpload
+                  onImageSelect={handleImageSelect}
+                  onClear={clearImage}
+                  selectedFile={imageFile}
+                  isProcessing={isImageProcessing}
+                  error={imageError}
+                />
+                {extractedText && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Extracted Text:
+                    </label>
+                    <textarea
+                      value={extractedText}
+                      onChange={(e) => setExtractedText(e.target.value)}
+                      placeholder="Text extracted from image..."
+                      readOnly={isImageProcessing}
+                      className="w-full min-h-[80px] p-3 border border-gray-300 rounded-lg text-sm resize-y font-inherit"
+                    />
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          )}
+            )}
 
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              {error}
-            </div>
-          )}
+            <TranslationControls
+              handleTranslateWithContext={handleTranslateWithContext}
+              isTranslating={isTranslating}
+              isImageProcessing={isImageProcessing}
+              inputText={inputText}
+              imageFile={imageFile}
+              error={error}
+            />
+
+            {translatedText && (
+              <TranslationOutput
+                translatedText={translatedText}
+                inputText={inputText}
+                sourceLanguage={sourceLanguage}
+                targetLanguage={targetLanguage}
+                selectedTone={selectedTone}
+                handleSpeakText={handleSpeakText}
+                handleGenerateExamples={handleGenerateExamples}
+                isGeneratingExamples={isGeneratingExamples}
+                generatedExamples={generatedExamples}
+                setGeneratedExamples={setGeneratedExamples}
+                handleSaveToVocabulary={handleSaveToVocabulary}
+                isCurrentTranslationSaved={isCurrentTranslationSaved}
+                handleRemoveFromVocabulary={handleRemoveFromVocabulary}
+                savedEntryId={savedEntryId}
+              />
+            )}
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col border-l border-gray-200">
@@ -639,5 +497,3 @@ const Translator: React.FC = () => {
     </div>
   );
 };
-
-export default Translator; 

@@ -110,7 +110,8 @@ export const useVocabulary = (): UseVocabularyReturn => {
       const newExampleSentences = await generateExampleSentences(
         entry.originalText,
         entry.sourceLanguage,
-        existingExamples
+        existingExamples,
+        entry.tone
       );
 
       const allExamples = [...existingExamples, ...newExampleSentences];

@@ -27,7 +27,7 @@ interface VocabularyReviewProps {
   onClose: () => void;
 }
 
-const VocabularyReview: React.FC<VocabularyReviewProps> = ({
+export const VocabularyReview: React.FC<VocabularyReviewProps> = ({
   vocabulary,
   onUpdateEntry,
   onRemoveEntry,
@@ -273,5 +273,3 @@ const VocabularyReview: React.FC<VocabularyReviewProps> = ({
     </div>
   );
 };
-
-export default VocabularyReview; 

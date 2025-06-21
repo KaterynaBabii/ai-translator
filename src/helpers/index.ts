@@ -7,35 +7,38 @@ const model = genAI.getGenerativeModel({ model: API_ENDPOINTS.GEMINI_MODEL });
 export const generateExampleSentences = async (
   wordOrPhrase: string,
   language: string,
-  existingExamples: string[] = []
+  existingExamples: string[] = [],
+  tone: string = 'neutral'
 ): Promise<string[]> => {
   try {
     const languageName = LANGUAGES.find(lang => lang.code === language)?.name || language;
+    const toneDescription = TONES.find(t => t.code === tone)?.description || 'Standard';
     
-    const prompt = `Generate ${UI_CONSTANTS.MAX_EXAMPLE_SENTENCES} practical example sentences using the word/phrase "${wordOrPhrase}" in ${languageName}.
+    const prompt = `Generate ${UI_CONSTANTS.MAX_EXAMPLE_SENTENCES} practical example sentences using the word/phrase "${wordOrPhrase}" in ${languageName} with a ${tone} tone (${toneDescription}).
                     
                     IMPORTANT REQUIREMENTS:
-                    1. **Include diverse language styles**: Make sure examples include:
+                    1. **Tone consistency**: All examples should maintain the ${tone} tone (${toneDescription})
+                    2. **Include diverse language styles**: Make sure examples include:
                        - Slang words or phrases (casual, trendy expressions)
                        - Idiomatic expressions (cultural sayings and metaphors)
                        - Cultural references (local customs, traditions, or popular culture)
                        - Informal language (everyday, conversational speech)
                     
-                    2. **Context variety**: Use different contexts and situations:
+                    3. **Context variety**: Use different contexts and situations:
                        - Casual conversations with friends
                        - Professional settings
                        - Social media or texting
                        - Family interactions
                        - Cultural celebrations or events
                     
-                    3. **Natural usage**: Make sentences sound natural and authentic to ${languageName} speakers
+                    4. **Natural usage**: Make sentences sound natural and authentic to ${languageName} speakers
                     
-                    4. **Avoid repetition**: ${existingExamples.length > 0 ? `Avoid repeating these existing examples: ${existingExamples.join(', ')}` : ''}
+                    5. **Avoid repetition**: ${existingExamples.length > 0 ? `Avoid repeating these existing examples: ${existingExamples.join(', ')}` : ''}
                     
-                    5. **Language level**: Include both simple and more complex usage patterns
+                    6. **Language level**: Include both simple and more complex usage patterns
                     
                     Return only the ${UI_CONSTANTS.MAX_EXAMPLE_SENTENCES} example sentences, one per line, without numbering or additional text.
-                    Each sentence should demonstrate different aspects of how "${wordOrPhrase}" can be used naturally in ${languageName}.`;
+                    Each sentence should demonstrate different aspects of how "${wordOrPhrase}" can be used naturally in ${languageName} with a ${tone} tone.`;
 
     const result = await model.generateContent(prompt);
     const response = result.response;

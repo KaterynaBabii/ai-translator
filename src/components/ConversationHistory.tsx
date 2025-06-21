@@ -3,7 +3,7 @@ import { EyeIcon, XIcon, TrashIcon } from 'lucide-react';
 import { ConversationEntry, ConversationHistoryProps } from '../types';
 import { LANGUAGES, TONE_DISPLAY_NAMES } from '../constants';
 
-const ConversationHistory: React.FC<ConversationHistoryProps> = React.memo(({
+export const ConversationHistory: React.FC<ConversationHistoryProps> = React.memo(({
   history,
   onClearHistory,
   onUseTranslation,
@@ -129,5 +129,3 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = React.memo(({
     </div>
   );
 });
-
-export default ConversationHistory; 

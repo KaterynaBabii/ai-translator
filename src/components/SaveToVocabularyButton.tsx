@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {BookmarkIcon, BookmarkCheckIcon, CheckIcon, XIcon } from 'lucide-react';
 import { SaveToVocabularyButtonProps } from '../types';
 
-const SaveToVocabularyButton: React.FC<SaveToVocabularyButtonProps> = ({
+export const SaveToVocabularyButton: React.FC<SaveToVocabularyButtonProps> = ({
   originalText,
   translatedText,
   sourceLanguage,
@@ -146,4 +146,3 @@ const SaveToVocabularyButton: React.FC<SaveToVocabularyButtonProps> = ({
   );
 };
 
-export default SaveToVocabularyButton; 
