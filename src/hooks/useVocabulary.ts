@@ -108,8 +108,8 @@ export const useVocabulary = (): UseVocabularyReturn => {
       const existingExamples = entry.exampleSentences || [];
       
       const newExampleSentences = await generateExampleSentences(
-        entry.originalText,
-        entry.sourceLanguage,
+        entry.translatedText,
+        entry.targetLanguage,
         existingExamples,
         entry.tone
       );

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PlayIcon, PauseIcon, TrashIcon, CheckIcon, Loader} from 'lucide-react';
 import { speakText } from '../utils/speechSynthesis';
 import { VocabularyEntry, VocabularySidebarProps } from '../types';
@@ -15,6 +15,15 @@ export const VocabularySidebar: React.FC<VocabularySidebarProps> = ({
   const [playingEntryId, setPlayingEntryId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'easy' | 'medium' | 'hard' | 'review'>('all');
   const [isGeneratingMore, setIsGeneratingMore] = useState(false);
+
+  useEffect(() => {
+    if (selectedEntry) {
+      const updatedEntry = vocabulary.find(v => v.id === selectedEntry.id);
+      if (updatedEntry) {
+        setSelectedEntry(updatedEntry);
+      }
+    }
+  }, [vocabulary, selectedEntry?.id]);
 
   const filteredVocabulary = useMemo(() => {
     switch (filter) {
@@ -47,10 +56,13 @@ export const VocabularySidebar: React.FC<VocabularySidebarProps> = ({
   };
 
   const handleGenerateContent = async (entry: VocabularyEntry) => {
-    await onGenerateContent(entry);
-    const updatedEntry = vocabulary.find(v => v.id === entry.id);
-    if (updatedEntry) {
-      setSelectedEntry(updatedEntry);
+    setIsGeneratingMore(true);
+    try {
+      await onGenerateContent(entry);
+    } catch (error) {
+      console.error('Failed to generate content:', error);
+    } finally {
+      setIsGeneratingMore(false);
     }
   };
 
@@ -63,11 +75,6 @@ export const VocabularySidebar: React.FC<VocabularySidebarProps> = ({
       };
       
       await onGenerateContent(entryWithMoreExamples);
-      
-      const updatedEntry = vocabulary.find(v => v.id === entry.id);
-      if (updatedEntry) {
-        setSelectedEntry(updatedEntry);
-      }
     } catch (error) {
       console.error('Failed to generate more examples:', error);
     } finally {
@@ -149,7 +156,7 @@ export const VocabularySidebar: React.FC<VocabularySidebarProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handlePlayAudio(entry.id, entry.originalText, entry.sourceLanguage);
+                      handlePlayAudio(entry.id, entry.translatedText, entry.targetLanguage);
                     }}
                     className="p-1 bg-transparent border-none cursor-pointer text-gray-500 rounded transition-all duration-200 hover:text-gray-700 hover:bg-gray-100"
                     title="Play pronunciation"

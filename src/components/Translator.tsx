@@ -372,7 +372,7 @@ export const Translator: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 m-0">AI Translator</h1>
+        <h1 className="text-4xl font-bold text-gray-800 m-0"> Smart Translator </h1>
       </div>
 
       <div className="grid grid-cols-[350px_1fr_350px] gap-6 min-h-[calc(100vh-200px)]">

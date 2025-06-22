@@ -12,6 +12,7 @@ export const LANGUAGES: Language[] = [
   { code: 'ko', name: 'Korean' },
   { code: 'zh', name: 'Chinese' },
   { code: 'th', name: 'Thai' },
+  { code: 'pl', name: 'Polish' },
 ];
 
 export const TONES: Tone[] = [
@@ -60,9 +61,9 @@ export const ERROR_MESSAGES = {
 } as const;
 
 export const API_ENDPOINTS = {
-  GEMINI_MODEL: 'gemini-2.5-flash-preview-04-17',
+  GEMINI_MODEL: 'gemini-2.0-flash-exp'
 } as const;
-
+//   'gemini-2.5-flash-preview-04-17',
 export const SLANG_PATTERNS = {
   en: [
     /\b(what's up|sup|hey|yo|cool|awesome|sick|lit|fire|bae|fam|bro|dude|guy|buddy)\b/gi,

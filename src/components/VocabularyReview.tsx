@@ -1,31 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { PlayIcon, TrashIcon, CheckIcon, Loader, XIcon, PauseIcon, BookIcon } from 'lucide-react';
 
 import { speakText } from '../utils/speechSynthesis';
-
-interface VocabularyEntry {
-  id: string;
-  timestamp: number;
-  sourceLanguage: string;
-  targetLanguage: string;
-  originalText: string;
-  translatedText: string;
-  tone: string;
-  notes?: string;
-  exampleSentences?: string[];
-  lastReviewed?: number;
-  reviewCount: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-}
-
-interface VocabularyReviewProps {
-  vocabulary: VocabularyEntry[];
-  onUpdateEntry: (id: string, updates: Partial<VocabularyEntry>) => void;
-  onRemoveEntry: (id: string) => void;
-  onMarkReviewed: (id: string) => void;
-  onGenerateContent: (entry: VocabularyEntry) => Promise<void>;
-  onClose: () => void;
-}
+import { VocabularyEntry, VocabularyReviewProps } from '../types';
+import { UI_CONSTANTS } from '../constants';
 
 export const VocabularyReview: React.FC<VocabularyReviewProps> = ({
   vocabulary,
@@ -38,6 +16,15 @@ export const VocabularyReview: React.FC<VocabularyReviewProps> = ({
   const [selectedEntry, setSelectedEntry] = useState<VocabularyEntry | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [filter, setFilter] = useState<'all' | 'easy' | 'medium' | 'hard' | 'review'>('all');
+
+  useEffect(() => {
+    if (selectedEntry) {
+      const updatedEntry = vocabulary.find(v => v.id === selectedEntry.id);
+      if (updatedEntry) {
+        setSelectedEntry(updatedEntry);
+      }
+    }
+  }, [vocabulary, selectedEntry?.id]);
 
   const filteredVocabulary = useMemo(() => {
     switch (filter) {
@@ -71,10 +58,10 @@ export const VocabularyReview: React.FC<VocabularyReviewProps> = ({
   };
 
   const handleGenerateContent = async (entry: VocabularyEntry) => {
-    await onGenerateContent(entry);
-    const updatedEntry = vocabulary.find(v => v.id === entry.id);
-    if (updatedEntry) {
-      setSelectedEntry(updatedEntry);
+    try {
+      await onGenerateContent(entry);
+    } catch (error) {
+      console.error('Failed to generate content:', error);
     }
   };
 
